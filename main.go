@@ -1,15 +1,22 @@
 package main 
 
 import (
-	"fmt"
+	"log"
 	"github.com/mismailzz/foreverstore/p2p"
 )
 
 func main(){
-	fmt.Println("Hello, AnthonyGC!")
-	transport := p2p.NewTCPTransport(":3000")
-	if err := transport.ListenAndAccept(); err != nil {
-		fmt.Printf("Error starting TCP Transport: %s\n", err)
+	transportOpts := p2p.TCPTransportOpts{
+		ListenAddress: ":3000",
+		HandshakeFunc: p2p.NOPEHandshake,
+		Decoder:       p2p.DefatultDecoder{},
 	}
+
+	transport := p2p.NewTCPTransport(transportOpts)
+
+	if err := transport.ListenAndAccept(); err != nil {
+		log.Fatal(err)
+	}
+ 
 	select {} // Block forever
 }

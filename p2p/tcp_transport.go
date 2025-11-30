@@ -6,6 +6,7 @@ import (
 	"fmt"
 )
 
+
 // TCPPeer represents the remote node over the TCP established connection.
 type TCPPeer struct {
 	// conn is the underlying connection of the peer.
@@ -23,8 +24,16 @@ func NewTCPPeer(conn net.Conn, outbound bool) *TCPPeer {
 }
 
 
+
+type TCPTransportOpts struct {
+	ListenAddress string
+	HandshakeFunc HandshakeFunc
+	Decoder       Decoder
+}
+
+
 type TCPTransport struct {
-	listernAddress string
+	TCPTransportOpts
 	listener       net.Listener
 
 	mu             sync.Mutex
@@ -32,9 +41,9 @@ type TCPTransport struct {
 	
 }
 
-func NewTCPTransport(listenAddr string) *TCPTransport {
+func NewTCPTransport(opts TCPTransportOpts) *TCPTransport {
 	return &TCPTransport{
-		listernAddress: listenAddr,
+		TCPTransportOpts: opts,
 	}
 }
 
@@ -42,7 +51,7 @@ func (t *TCPTransport) ListenAndAccept() error {
 
 	var err error
 	// Create a TCP listener
-	t.listener, err = net.Listen("tcp", t.listernAddress)
+	t.listener, err = net.Listen("tcp", t.ListenAddress)
 	if err != nil {
 		return err
 	}
@@ -58,6 +67,8 @@ func (t *TCPTransport) startAcceptLoop() {
 		if err != nil {
 			fmt.Printf("TCP Accept Error: %s\n", err)
 		}
+
+		fmt.Printf("New incomfing connection %v\n", conn)
 		go t.handleConnection(conn)
 	}
 }
@@ -65,5 +76,34 @@ func (t *TCPTransport) startAcceptLoop() {
 func (t *TCPTransport) handleConnection(conn net.Conn) {
 
 	peer := NewTCPPeer(conn, true) // outbound = true for accepted connections
-	fmt.Printf("New incomfing connection %v\n", peer)
+
+	if err := t.HandshakeFunc(peer);  err != nil {
+		fmt.Printf("TCP Handshake failed: %s\n", err)
+		conn.Close()
+		return
+	}
+
+	// Read loop 
+	msg := &Message{}
+	// buf := make([]byte, 1024)
+	for {
+		// n, err := conn.Read(buf)
+		// if err != nil {
+		// 	fmt.Printf("TCP Read error: %s\n", err)
+		// 	conn.Close()
+		// 	return
+		// }
+		// fmt.Printf("Received message: %+v\n", buf[:n])
+
+		if err := t.Decoder.Decode(conn, msg); err != nil {
+			fmt.Printf("TCP Decode error: %s\n", err)
+			continue
+		}
+		msg.From = conn.RemoteAddr() // From where the message is coming
+		fmt.Printf("Received message: %+v\n", msg)
+	}
+
+
+
+
 }
