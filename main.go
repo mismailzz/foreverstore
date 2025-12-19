@@ -1,22 +1,9 @@
-package main 
+package main
 
-import (
-	"log"
-	"github.com/mismailzz/foreverstore/p2p"
-)
+import "fmt"
 
-func main(){
-	transportOpts := p2p.TCPTransportOpts{
-		ListenAddress: ":3000",
-		HandshakeFunc: p2p.NOPEHandshake,
-		Decoder:       p2p.DefatultDecoder{},
-	}
+func main() {
 
-	transport := p2p.NewTCPTransport(transportOpts)
+	fmt.Println("Hello World")
 
-	if err := transport.ListenAndAccept(); err != nil {
-		log.Fatal(err)
-	}
- 
-	select {} // Block forever
 }
