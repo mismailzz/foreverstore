@@ -1,9 +1,19 @@
 package main
 
-import "fmt"
+import (
+	"log"
+
+	"github.com/mismailzz/foreverstore/p2p"
+)
 
 func main() {
 
-	fmt.Println("Hello World")
+	tr := p2p.NewTCPTransport(":4000")
+	err := tr.ListenAndAccept()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	select {} // Block forever
 
 }
