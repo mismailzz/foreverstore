@@ -25,8 +25,15 @@ func NewTCPPeer(conn net.Conn, outbound bool) *TCPPeer {
 	}
 }
 
+// Defined to reduce the size of TCPTransport struct
+type TCPTransportOpts struct {
+	// public fields so callers from other packages can set options
+	ListenAddress string
+	Shakehand HandShakeFunc
+}
+
 type TCPTransport struct {
-	listenAddress string
+	TCPTransportOpts
 	listener      net.Listener
 
 	// Better to Mutex should be above the object -- need to be protect
@@ -34,9 +41,9 @@ type TCPTransport struct {
 	peers map[net.Addr]Peer
 }
 
-func NewTCPTransport(listenAdrr string) *TCPTransport {
+func NewTCPTransport(opts TCPTransportOpts) *TCPTransport {
 	return &TCPTransport{
-		listenAddress: listenAdrr,
+		TCPTransportOpts: opts,
 	}
 }
 
@@ -45,7 +52,7 @@ func (t *TCPTransport) ListenAndAccept() error {
 
 	var err error
 	// define listener
-	t.listener, err = net.Listen("tcp", t.listenAddress)
+	t.listener, err = net.Listen("tcp", t.ListenAddress)
 	if err != nil {
 		return err
 	}
@@ -71,4 +78,23 @@ func (t *TCPTransport) startAcceptLoop() {
 func (t *TCPTransport) handleNewConnection(conn net.Conn) {
 	peer := NewTCPPeer(conn, true) // outbound = true
 	fmt.Printf("New incoming connection from:%+v\n", peer)
+
+	if err := t.Shakehand(peer); err != nil {
+		conn.Close() // close connection
+		fmt.Printf("Error happens during handshake %s\n", err)
+		return 
+	}
+
+	buff := make([]byte, 2000)
+	// Read
+	for {
+
+		n, err := conn.Read(buff)
+		if err != nil {
+			fmt.Printf("Error reading message: TCP error %s\n", err)
+			return
+		}
+		fmt.Printf("Message %v\n", buff[:n])
+
+	}
 }
