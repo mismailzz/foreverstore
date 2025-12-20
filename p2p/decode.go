@@ -6,7 +6,7 @@ import (
 
 // Any Protocol can define its own Decoder to decode bytes into Message.
 type Decoder interface {
-	Decode(io.Reader, *Message) error
+	Decode(io.Reader, *RPC) error
 }
 
 
@@ -15,7 +15,7 @@ type Decoder interface {
 // just reading bytes into Message.Payload struct 
 type DefaultDecoder struct{}
 
-func (d *DefaultDecoder) Decode(r io.Reader, msg *Message) error {
+func (d *DefaultDecoder) Decode(r io.Reader, rpc *RPC) error {
 
 	buffer := make([]byte, 1024) // assuming max message size is 1024 bytes
 	// connection read 
@@ -24,6 +24,6 @@ func (d *DefaultDecoder) Decode(r io.Reader, msg *Message) error {
 		return err
 	}
 	
-	msg.Payload = buffer[:n]
+	rpc.Payload = buffer[:n]
 	return nil
 }

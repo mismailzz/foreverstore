@@ -3,7 +3,6 @@ package p2p
 import (
 	"fmt"
 	"net"
-	"sync"
 )
 
 // TCPPeer represents a remote node in an established TCP connection.
@@ -25,6 +24,11 @@ func NewTCPPeer(conn net.Conn, outbound bool) *TCPPeer {
 	}
 }
 
+// Close implements the Peer interface, closing the underlying TCP connection.
+func (p *TCPPeer) Close() error {
+	return p.conn.Close()
+}
+
 // Defined to reduce the size of TCPTransport struct
 type TCPTransportOpts struct {
 	// public fields so callers from other packages can set options
@@ -36,16 +40,19 @@ type TCPTransportOpts struct {
 type TCPTransport struct {
 	TCPTransportOpts
 	listener      net.Listener
-
-	// Better to Mutex should be above the object -- need to be protect
-	mu    sync.RWMutex
-	peers map[net.Addr]Peer
+	rpcchan	 chan RPC
 }
 
 func NewTCPTransport(opts TCPTransportOpts) *TCPTransport {
 	return &TCPTransport{
 		TCPTransportOpts: opts,
+		rpcchan:    make(chan RPC),
 	}
+}
+
+// Consume implements the Transport interface, and returns a read-only channel of RPC message coming from peers.
+func (t *TCPTransport) Consume() <-chan RPC {
+	return t.rpcchan
 }
 
 // What Transport do? Listen/Accept
@@ -86,20 +93,19 @@ func (t *TCPTransport) handleNewConnection(conn net.Conn) {
 		return 
 	}
 
-	msg := &Message{}
+	rpc := RPC{}
 	// Read
 	for {
-		if err := t.Decoder.Decode(conn, msg); err != nil {
+		if err := t.Decoder.Decode(conn, &rpc); err != nil {
 			conn.Close() // close connection
 			fmt.Printf("Error decoding message: %s\n", err)
 			return
 		}
 
-		msg.From = conn.RemoteAddr()
+		rpc.From = conn.RemoteAddr()
 
-		// fmt.Printf("Received message: %s\n", string(msg.Payload)) // --> convert the byte slice to string, 
-		// which exactly show the content of the mesage. 
-		// but lets use the following to show it's a byte slice.
-		fmt.Printf("Received message: %v\n",msg)
+		// Send to channel
+		t.rpcchan <- rpc
+
 	}
 }

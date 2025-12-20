@@ -21,6 +21,13 @@ func main() {
 		log.Fatal(err)
 	}
 
+	go func() {
+		for {
+			rpc := <-tr.Consume()
+			log.Printf("Received message from %s: %s\n", rpc.From.String(), string(rpc.Payload))
+		}
+	}()
+
 	select {} // Block forever
 
 }
