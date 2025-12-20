@@ -94,9 +94,12 @@ func (t *TCPTransport) handleNewConnection(conn net.Conn) {
 			fmt.Printf("Error decoding message: %s\n", err)
 			return
 		}
+
+		msg.From = conn.RemoteAddr()
+
 		// fmt.Printf("Received message: %s\n", string(msg.Payload)) // --> convert the byte slice to string, 
 		// which exactly show the content of the mesage. 
 		// but lets use the following to show it's a byte slice.
-		fmt.Printf("Received message: %s\n", msg.Payload)
+		fmt.Printf("Received message: %v\n",msg)
 	}
 }
