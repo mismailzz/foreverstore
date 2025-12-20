@@ -12,6 +12,7 @@ func main() {
 		p2p.TCPTransportOpts{
 			ListenAddress: ":4000",
 			Shakehand:     p2p.NoHandShakeFunc,
+			Decoder:       &p2p.DefaultDecoder{},
 		},
 	)
 	// tr := p2p.NewTCPTransport(":4000")

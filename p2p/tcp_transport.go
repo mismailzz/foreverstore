@@ -30,6 +30,7 @@ type TCPTransportOpts struct {
 	// public fields so callers from other packages can set options
 	ListenAddress string
 	Shakehand HandShakeFunc
+	Decoder    Decoder
 }
 
 type TCPTransport struct {
@@ -85,16 +86,17 @@ func (t *TCPTransport) handleNewConnection(conn net.Conn) {
 		return 
 	}
 
-	buff := make([]byte, 2000)
+	msg := &Message{}
 	// Read
 	for {
-
-		n, err := conn.Read(buff)
-		if err != nil {
-			fmt.Printf("Error reading message: TCP error %s\n", err)
+		if err := t.Decoder.Decode(conn, msg); err != nil {
+			conn.Close() // close connection
+			fmt.Printf("Error decoding message: %s\n", err)
 			return
 		}
-		fmt.Printf("Message %v\n", buff[:n])
-
+		// fmt.Printf("Received message: %s\n", string(msg.Payload)) // --> convert the byte slice to string, 
+		// which exactly show the content of the mesage. 
+		// but lets use the following to show it's a byte slice.
+		fmt.Printf("Received message: %s\n", msg.Payload)
 	}
 }
