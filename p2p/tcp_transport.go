@@ -35,6 +35,7 @@ type TCPTransportOpts struct {
 	ListenAddress string
 	Shakehand HandShakeFunc
 	Decoder    Decoder
+	OnPeer func(Peer) error
 }
 
 type TCPTransport struct {
@@ -87,23 +88,35 @@ func (t *TCPTransport) handleNewConnection(conn net.Conn) {
 	peer := NewTCPPeer(conn, true) // outbound = true
 	fmt.Printf("New incoming connection from:%+v\n", peer)
 
+	defer func(){ // ensure connection is closed on exit
+		conn.Close()
+	}()
+
+	// 1. Handshake 
 	if err := t.Shakehand(peer); err != nil {
-		conn.Close() // close connection
 		fmt.Printf("Error happens during handshake %s\n", err)
 		return 
 	}
 
+	// 2. Notify OnPeer
+	if t.OnPeer != nil { // if OnPeer function is defined
+		if err := t.OnPeer(peer); err != nil {
+			fmt.Printf("OnPeer error: %s\n", err)
+			return 
+		}
+	}
+
+
+	// 3. Read messages in loop from connection
 	rpc := RPC{}
 	// Read
 	for {
 		if err := t.Decoder.Decode(conn, &rpc); err != nil {
-			conn.Close() // close connection
 			fmt.Printf("Error decoding message: %s\n", err)
 			return
 		}
 
 		rpc.From = conn.RemoteAddr()
-
 		// Send to channel
 		t.rpcchan <- rpc
 
