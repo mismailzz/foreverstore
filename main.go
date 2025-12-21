@@ -5,6 +5,11 @@ import (
 	"github.com/mismailzz/foreverstore/p2p"
 )
 
+func onPeer (peer p2p.Peer) error { 
+	log.Printf("New peer connected: %v\n", peer)
+	return nil
+}
+
 func main() {
 
 	tr := p2p.NewTCPTransport(
@@ -12,10 +17,7 @@ func main() {
 			ListenAddress: ":4000",
 			Shakehand:     p2p.NoHandShakeFunc,
 			Decoder:       &p2p.DefaultDecoder{},
-			OnPeer: func(peer p2p.Peer) error { 
-				log.Printf("New peer connected: %v\n", peer)
-				return nil
-			},
+			OnPeer: 	onPeer,
 		},
 	)
 	// tr := p2p.NewTCPTransport(":4000")
