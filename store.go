@@ -4,6 +4,9 @@ import (
 	"io"
 	"os"
 	"fmt"
+	"crypto/sha1"
+	"encoding/hex"
+	"strings"
 )
 
 type PathTransformFunc func(string) string
@@ -14,6 +17,27 @@ type StoreOpts struct {
 
 var DefaultPathTransformFunc = func (key string) string {
 	return key
+}
+
+func CASPathTransformFunc (key string) string {
+
+	// Create determistic hash from same key using SHA1 
+	hash := sha1.Sum([]byte(key))
+	// Convert the bytes to hex string for hash 
+	hashStr := hex.EncodeToString(hash[:])
+
+	// Split the hash string into multiple parts for directory structure (depth levels)
+	blocksize := 5
+	sliceLen := len(hashStr) / blocksize
+	paths := make([]string, sliceLen)
+
+	for i := 0; i < sliceLen; i++ {
+    	from, to := i*blocksize, (i*blocksize)+blocksize
+    	paths[i] = hashStr[from:to]
+	}	
+	
+	// Join the parts with "/" to form the final path
+	return strings.Join(paths, "/")
 }
 
 type Store struct {
