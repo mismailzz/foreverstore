@@ -48,7 +48,7 @@ type PathKey struct {
 	Filename string 
 }
 
-func (p PathKey) GenerateFileNameWithPath() string { 
+func (p PathKey) FullPath() string { 
 	return fmt.Sprintf("%s/%s", p.PathName, p.Filename)
 }
 
@@ -71,7 +71,7 @@ func (s *Store) writeStream (key string, r io.Reader) error {
 		return err
 	}
 
-	fileNameFullPath := pathKey.GenerateFileNameWithPath()
+	fileNameFullPath := pathKey.FullPath()
 
 	// Create file
 	f, err := os.Create(fileNameFullPath)
