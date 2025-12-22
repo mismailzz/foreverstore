@@ -4,6 +4,7 @@ import (
 	"io"
 	"os"
 	"fmt"
+	"log"
 	"crypto/sha1"
 	"encoding/hex"
 	"strings"
@@ -101,4 +102,32 @@ func (s *Store) readStream (key string) (io.Reader, error){
 	buf := new(bytes.Buffer)
 	_, err = io.Copy(buf, f)
 	return buf, err
+}
+
+func (s *Store) Delete(key string) error {
+	pathKey := s.PathTransformFunc(key)
+
+	defer func(){
+		log.Printf("deleted [%s] from disk", pathKey.Filename)
+	}()
+
+	fullFileName := pathKey.FullPath()
+	if fileExist(fullFileName){
+		// It can delete only file but not the path  
+		if err := os.RemoveAll(fullFileName); err != nil { return err }
+		// due to which we delete the parent directory - which is wierd but workaround
+		// need double deletion 
+		parentDir := strings.Split(pathKey.PathName, "/")[0]
+		if err := os.RemoveAll(parentDir); err != nil { return err }
+	}
+
+	return nil 
+}
+
+func fileExist (filename string) bool {
+	if _, err := os.Stat(filename); os.IsNotExist(err) {
+    	// file doesnt exist 
+		return false 
+	}
+	return true
 }

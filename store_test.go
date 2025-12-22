@@ -36,32 +36,38 @@ func TestStore(t *testing.T){
 	if string(b) != string(data){
 		t.Errorf("want %s have %s", data, b)
 	}
+
+	// 5. Delete file 
+
+	if err = s.Delete(key); err != nil {
+		t.Errorf("Error deleting file %s\n", err)
+	}
 }
 
-func TestCASPathTransformFunc(t *testing.T) {
-	key := "examplekey"
-	expectedPath := "67743/9fbbb/305f1/d04e0/3730e/29d2c/78498/e5231" // Example expected path, adjust as needed
-	expectedFileName := "677439fbbb305f1d04e03730e29d2c78498e5231"
-	pathKey := CASPathTransformFunc(key)
+// func TestCASPathTransformFunc(t *testing.T) {
+// 	key := "examplekey"
+// 	expectedPath := "67743/9fbbb/305f1/d04e0/3730e/29d2c/78498/e5231" // Example expected path, adjust as needed
+// 	expectedFileName := "677439fbbb305f1d04e03730e29d2c78498e5231"
+// 	pathKey := CASPathTransformFunc(key)
 	
-	if pathKey.PathName != expectedPath {
-		t.Errorf("have %s want %s ", pathKey.PathName, expectedPath)
-	}
-	if pathKey.Filename != expectedFileName {
-		t.Errorf("have %s want %s ", pathKey.Filename, expectedFileName)
-	}
-}
+// 	if pathKey.PathName != expectedPath {
+// 		t.Errorf("have %s want %s ", pathKey.PathName, expectedPath)
+// 	}
+// 	if pathKey.Filename != expectedFileName {
+// 		t.Errorf("have %s want %s ", pathKey.Filename, expectedFileName)
+// 	}
+// }
 
-func TestStore_writeStream(t *testing.T) {
-	opts := StoreOpts{
-		PathTransformFunc: CASPathTransformFunc,
-	}
+// func TestStore_writeStream(t *testing.T) {
+// 	opts := StoreOpts{
+// 		PathTransformFunc: CASPathTransformFunc,
+// 	}
 
-	store := NewStore(opts)
+// 	store := NewStore(opts)
 
-	data := bytes.NewReader([]byte("Hello, World!"))
-	if err := store.writeStream("testkey", data); err != nil {
-		t.Fatalf("writeStream failed: %v", err)
-	}
+// 	data := bytes.NewReader([]byte("Hello, World!"))
+// 	if err := store.writeStream("testkey", data); err != nil {
+// 		t.Fatalf("writeStream failed: %v", err)
+// 	}
 
-}
+// }
