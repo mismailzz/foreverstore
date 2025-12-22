@@ -39,17 +39,17 @@ func CASPathTransformFunc (key string) PathKey {
 	
 	return PathKey {
 		PathName: strings.Join(paths, "/"), // Join the parts with "/" to form the final path
-		Original: hashStr,
+		Filename: hashStr,
 	}
 }
 
 type PathKey struct {
 	PathName string 
-	Original string 
+	Filename string 
 }
 
 func (p PathKey) GenerateFileNameWithPath() string { 
-	return fmt.Sprintf("%s/%s", p.PathName, p.Original)
+	return fmt.Sprintf("%s/%s", p.PathName, p.Filename)
 }
 
 type Store struct {
@@ -71,10 +71,10 @@ func (s *Store) writeStream (key string, r io.Reader) error {
 		return err
 	}
 
-	fileName := pathKey.GenerateFileNameWithPath()
+	fileNameFullPath := pathKey.GenerateFileNameWithPath()
 
 	// Create file
-	f, err := os.Create(fileName)
+	f, err := os.Create(fileNameFullPath)
 	if err != nil {
 		return err
 	}
@@ -84,7 +84,7 @@ func (s *Store) writeStream (key string, r io.Reader) error {
 		return err
 	}
 
-	fmt.Printf("Written %d bytes to %s\n", n, fileName)
+	fmt.Printf("Written %d bytes to %s\n", n, fileNameFullPath)
 
 	return nil
 }
