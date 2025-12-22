@@ -3,7 +3,40 @@ package main
 import (
 	"testing"
 	"bytes"
+	"fmt"
+	"io/ioutil"
 )
+
+func TestStore(t *testing.T){
+	
+	// 1. Initialize Store
+	opts := StoreOpts {
+		PathTransformFunc: CASPathTransformFunc,
+	}
+	s := NewStore(opts)
+
+	// 2. Define a file 
+	key := "exampleFile"
+	data := []byte("hello world!")
+
+	// 3. Write to a file 
+	if err := s.writeStream(key, bytes.NewReader(data)); err != nil {
+		t.Errorf("writeStream %s\n", err)
+	}
+
+	// 4. Read to a file 
+	r, err := s.readStream(key)
+	if err != nil { 
+		t.Errorf("readStream %s\n", err)
+	}
+
+	b, _ := ioutil.ReadAll(r)
+	fmt.Println(string(b))
+
+	if string(b) != string(data){
+		t.Errorf("want %s have %s", data, b)
+	}
+}
 
 func TestCASPathTransformFunc(t *testing.T) {
 	key := "examplekey"

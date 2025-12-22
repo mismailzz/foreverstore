@@ -7,6 +7,7 @@ import (
 	"crypto/sha1"
 	"encoding/hex"
 	"strings"
+	"bytes"
 )
 
 type PathTransformFunc func(string) PathKey
@@ -87,4 +88,17 @@ func (s *Store) writeStream (key string, r io.Reader) error {
 	fmt.Printf("Written %d bytes to %s\n", n, fileNameFullPath)
 
 	return nil
+}
+
+func (s *Store) readStream (key string) (io.Reader, error){
+	pathKey := s.PathTransformFunc(key)
+	f, err := os.Open(pathKey.FullPath())
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+	
+	buf := new(bytes.Buffer)
+	_, err = io.Copy(buf, f)
+	return buf, err
 }
