@@ -9,17 +9,18 @@ import (
 	"strings"
 )
 
-type PathTransformFunc func(string) string
+type PathTransformFunc func(string) PathKey
 
 type StoreOpts struct {
 	PathTransformFunc PathTransformFunc
 }
 
-var DefaultPathTransformFunc = func (key string) string {
-	return key
+
+var DefaultPathTransformFunc = func (key string) string{
+	return key 
 }
 
-func CASPathTransformFunc (key string) string {
+func CASPathTransformFunc (key string) PathKey {
 
 	// Create determistic hash from same key using SHA1 
 	hash := sha1.Sum([]byte(key))
@@ -36,8 +37,19 @@ func CASPathTransformFunc (key string) string {
     	paths[i] = hashStr[from:to]
 	}	
 	
-	// Join the parts with "/" to form the final path
-	return strings.Join(paths, "/")
+	return PathKey {
+		PathName: strings.Join(paths, "/"), // Join the parts with "/" to form the final path
+		Original: hashStr,
+	}
+}
+
+type PathKey struct {
+	PathName string 
+	Original string 
+}
+
+func (p PathKey) GenerateFileNameWithPath() string { 
+	return fmt.Sprintf("%s/%s", p.PathName, p.Original)
 }
 
 type Store struct {
@@ -52,28 +64,27 @@ func NewStore(opts StoreOpts) *Store {
 
 func (s *Store) writeStream (key string, r io.Reader) error {
 
-	pathname := s.PathTransformFunc(key)
+	pathKey := s.PathTransformFunc(key)
 
 	// Check permissions in the provided pathname
-	if err := os.MkdirAll(pathname, os.ModePerm); err != nil {
+	if err := os.MkdirAll(pathKey.PathName, os.ModePerm); err != nil {
 		return err
 	}
 
-	filename := "myspecialfile"
-	pathAndFilename := pathname + "/" + filename
+	fileName := pathKey.GenerateFileNameWithPath()
 
 	// Create file
-	file, err := os.Create(pathAndFilename)
+	f, err := os.Create(fileName)
 	if err != nil {
 		return err
 	}
 	
-	n, err := io.Copy(file, r)
+	n, err := io.Copy(f, r)
 	if err != nil {
 		return err
 	}
 
-	fmt.Printf("Writted %d bytes to %s\n", n, pathAndFilename)
+	fmt.Printf("Written %d bytes to %s\n", n, fileName)
 
 	return nil
 }
