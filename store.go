@@ -78,7 +78,6 @@ func (s *Store) writeStream (key string, r io.Reader) error {
 
 	pathnameWithRoot := fmt.Sprintf("%s/%s", s.RootDir, pathKey.Pathname)
 
-	fmt.Printf("path:%s", pathnameWithRoot)
 	// Check permissions in the provided pathname
 	if err := os.MkdirAll(pathnameWithRoot, os.ModePerm); err != nil {
 		return err
@@ -104,7 +103,10 @@ func (s *Store) writeStream (key string, r io.Reader) error {
 
 func (s *Store) readStream (key string) (io.Reader, error){
 	pathKey := s.PathTransformFunc(key)
-	f, err := os.Open(pathKey.FullPath())
+	
+	filenameFullPathWithRoot := fmt.Sprintf("%s/%s", s.RootDir, pathKey.FullPath()) 
+
+	f, err := os.Open(filenameFullPathWithRoot)
 	if err != nil {
 		return nil, err
 	}
@@ -121,14 +123,15 @@ func (s *Store) Delete(key string) error {
 	defer func(){
 		log.Printf("deleted [%s] from disk", pathKey.Filename)
 	}()
-
-	fullFileName := pathKey.FullPath()
-	if fileExist(fullFileName){
+	
+	filenameFullPathWithRoot := fmt.Sprintf("%s/%s", s.RootDir, pathKey.FullPath())
+	
+	if fileExist(filenameFullPathWithRoot){
 		// It can delete only file but not the path  
-		if err := os.RemoveAll(fullFileName); err != nil { return err }
+		if err := os.RemoveAll(filenameFullPathWithRoot); err != nil { return err }
 		// due to which we delete the parent directory - which is wierd but workaround
 		// need double deletion 
-		parentDir := strings.Split(pathKey.Pathname, "/")[0]
+		parentDir := s.RootDir
 		if err := os.RemoveAll(parentDir); err != nil { return err }
 	}
 
