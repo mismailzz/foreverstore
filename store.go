@@ -11,16 +11,16 @@ import (
 	"bytes"
 )
 
-type PathTransformFunc func(string) PathKey
+var (
+	RootDirPathname = "rootDirForeverStore"
+)
 
-type StoreOpts struct {
-	PathTransformFunc PathTransformFunc
-}
+type PathTransformFunc func(string) PathKey
 
 
 var DefaultPathTransformFunc = func (key string) PathKey{
 	return PathKey{
-		PathName: key,
+		Pathname: key,
 		Filename: key, 
 	}
 }
@@ -43,18 +43,23 @@ func CASPathTransformFunc (key string) PathKey {
 	}	
 	
 	return PathKey {
-		PathName: strings.Join(paths, "/"), // Join the parts with "/" to form the final path
+		Pathname: strings.Join(paths, "/"), // Join the parts with "/" to form the final path
 		Filename: hashStr,
 	}
 }
 
 type PathKey struct {
-	PathName string 
+	Pathname string 
 	Filename string 
 }
 
 func (p PathKey) FullPath() string { 
-	return fmt.Sprintf("%s/%s", p.PathName, p.Filename)
+	return fmt.Sprintf("%s/%s", p.Pathname, p.Filename)
+}
+
+type StoreOpts struct {
+	PathTransformFunc PathTransformFunc
+	RootDir string
 }
 
 type Store struct {
@@ -71,15 +76,18 @@ func (s *Store) writeStream (key string, r io.Reader) error {
 
 	pathKey := s.PathTransformFunc(key)
 
+	pathnameWithRoot := fmt.Sprintf("%s/%s", s.RootDir, pathKey.Pathname)
+
+	fmt.Printf("path:%s", pathnameWithRoot)
 	// Check permissions in the provided pathname
-	if err := os.MkdirAll(pathKey.PathName, os.ModePerm); err != nil {
+	if err := os.MkdirAll(pathnameWithRoot, os.ModePerm); err != nil {
 		return err
 	}
 
-	fileNameFullPath := pathKey.FullPath()
+	filenameFullPathWithRoot := fmt.Sprintf("%s/%s", s.RootDir, pathKey.FullPath()) 
 
 	// Create file
-	f, err := os.Create(fileNameFullPath)
+	f, err := os.Create(filenameFullPathWithRoot)
 	if err != nil {
 		return err
 	}
@@ -89,7 +97,7 @@ func (s *Store) writeStream (key string, r io.Reader) error {
 		return err
 	}
 
-	fmt.Printf("Written %d bytes to %s\n", n, fileNameFullPath)
+	fmt.Printf("Written %d bytes to %s\n", n, filenameFullPathWithRoot)
 
 	return nil
 }
@@ -120,7 +128,7 @@ func (s *Store) Delete(key string) error {
 		if err := os.RemoveAll(fullFileName); err != nil { return err }
 		// due to which we delete the parent directory - which is wierd but workaround
 		// need double deletion 
-		parentDir := strings.Split(pathKey.PathName, "/")[0]
+		parentDir := strings.Split(pathKey.Pathname, "/")[0]
 		if err := os.RemoveAll(parentDir); err != nil { return err }
 	}
 
