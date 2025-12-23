@@ -18,8 +18,11 @@ type StoreOpts struct {
 }
 
 
-var DefaultPathTransformFunc = func (key string) string{
-	return key 
+var DefaultPathTransformFunc = func (key string) PathKey{
+	return PathKey{
+		PathName: key,
+		Filename: key, 
+	}
 }
 
 func CASPathTransformFunc (key string) PathKey {
