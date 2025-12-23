@@ -53,8 +53,8 @@ type PathKey struct {
 	Filename string 
 }
 
-func (p PathKey) FullPath() string { 
-	return fmt.Sprintf("%s/%s", p.Pathname, p.Filename)
+func (p PathKey) FullPath(rootDir string) string { 
+	return fmt.Sprintf("%s/%s/%s", rootDir, p.Pathname, p.Filename)
 }
 
 type StoreOpts struct {
@@ -83,7 +83,7 @@ func (s *Store) writeStream (key string, r io.Reader) error {
 		return err
 	}
 
-	filenameFullPathWithRoot := fmt.Sprintf("%s/%s", s.RootDir, pathKey.FullPath()) 
+	filenameFullPathWithRoot := pathKey.FullPath(s.RootDir) 
 
 	// Create file
 	f, err := os.Create(filenameFullPathWithRoot)
@@ -104,7 +104,7 @@ func (s *Store) writeStream (key string, r io.Reader) error {
 func (s *Store) readStream (key string) (io.Reader, error){
 	pathKey := s.PathTransformFunc(key)
 	
-	filenameFullPathWithRoot := fmt.Sprintf("%s/%s", s.RootDir, pathKey.FullPath()) 
+	filenameFullPathWithRoot := pathKey.FullPath(s.RootDir)
 
 	f, err := os.Open(filenameFullPathWithRoot)
 	if err != nil {
@@ -124,7 +124,7 @@ func (s *Store) Delete(key string) error {
 		log.Printf("deleted [%s] from disk", pathKey.Filename)
 	}()
 	
-	filenameFullPathWithRoot := fmt.Sprintf("%s/%s", s.RootDir, pathKey.FullPath())
+	filenameFullPathWithRoot := pathKey.FullPath(s.RootDir)
 	
 	if fileExist(filenameFullPathWithRoot){
 		// It can delete only file but not the path  
