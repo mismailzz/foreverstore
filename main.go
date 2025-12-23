@@ -5,34 +5,27 @@ import (
 	"github.com/mismailzz/foreverstore/p2p"
 )
 
-func onPeer (peer p2p.Peer) error { 
-	log.Printf("New peer connected: %v\n", peer)
-	return nil
-}
-
 func main() {
 
-	tr := p2p.NewTCPTransport(
-		p2p.TCPTransportOpts{
-			ListenAddress: ":4000",
-			Shakehand:     p2p.NoHandShakeFunc,
-			Decoder:       &p2p.DefaultDecoder{},
-			OnPeer: 	onPeer,
-		},
-	)
-	// tr := p2p.NewTCPTransport(":4000")
-	err := tr.ListenAndAccept()
-	if err != nil {
-		log.Fatal(err)
+	transportOpts := p2p.TCPTransportOpts {
+		ListenAddress: ":3000",
+		Shakehand: p2p.NoHandShakeFunc,
+		Decoder: &p2p.DefaultDecoder{},
+		// TODO: OnPeer func
+	}
+	tcpTransport := p2p.NewTCPTransport(transportOpts)
+
+	fileServerOpts := FileServerOpts{
+		StorageRootDir: "3000_network", // to differentiate and storage in the future client files in different port
+		PathTransformFunc: CASPathTransformFunc,
+		Transport:  tcpTransport,
+	}
+	
+	server := NewFileServer(fileServerOpts)
+	if err := server.Start(); err != nil {
+		log.Fatalf("Error occurred during starting the server: %s\n", err)
 	}
 
-	go func() {
-		for {
-			rpc := <-tr.Consume()
-			log.Printf("Received message from %s: %s\n", rpc.From.String(), string(rpc.Payload))
-		}
-	}()
-
-	select {} // Block forever
+	select {} //block
 
 }
