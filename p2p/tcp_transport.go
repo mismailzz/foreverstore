@@ -3,6 +3,7 @@ package p2p
 import (
 	"fmt"
 	"net"
+	"errors"
 )
 
 // TCPPeer represents a remote node in an established TCP connection.
@@ -77,6 +78,9 @@ func (t *TCPTransport) ListenAndAccept() error {
 func (t *TCPTransport) startAcceptLoop() {
 	for {
 		conn, err := t.listener.Accept()
+
+		if errors.Is(err, net.ErrClosed){ return } // to stop accepting when the listener is closed otherwise Close for listener is happening outside causing panic
+
 		if err != nil {
 			fmt.Println("Accept error:", err)
 		}
@@ -122,4 +126,10 @@ func (t *TCPTransport) handleNewConnection(conn net.Conn) {
 		t.rpcchan <- rpc
 
 	}
+}
+
+// implementing the Transport interface
+// stop listening too when the user quit action
+func (t *TCPTransport) Close() error {
+	return t.listener.Close()
 }

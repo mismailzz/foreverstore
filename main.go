@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"github.com/mismailzz/foreverstore/p2p"
+	"time"
 )
 
 func main() {
@@ -22,10 +23,18 @@ func main() {
 	}
 	
 	server := NewFileServer(fileServerOpts)
+
+
+	go func(){ // stop server after 3 secoond from starting server
+		time.Sleep(time.Second * 3) //after 3 sec
+		server.Stop()
+	}()
+
+
 	if err := server.Start(); err != nil {
 		log.Fatalf("Error occurred during starting the server: %s\n", err)
 	}
 
-	select {} //block
+	
 
 }
