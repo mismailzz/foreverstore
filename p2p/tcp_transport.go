@@ -1,9 +1,9 @@
 package p2p
 
 import (
+	"errors"
 	"fmt"
 	"net"
-	"errors"
 )
 
 // TCPPeer represents a remote node in an established TCP connection.
@@ -34,21 +34,21 @@ func (p *TCPPeer) Close() error {
 type TCPTransportOpts struct {
 	// public fields so callers from other packages can set options
 	ListenAddress string
-	Shakehand HandShakeFunc
-	Decoder    Decoder
-	OnPeer func(Peer) error
+	Shakehand     HandShakeFunc
+	Decoder       Decoder
+	OnPeer        func(Peer) error
 }
 
 type TCPTransport struct {
 	TCPTransportOpts
-	listener      net.Listener
-	rpcchan	 chan RPC
+	listener net.Listener
+	rpcchan  chan RPC
 }
 
 func NewTCPTransport(opts TCPTransportOpts) *TCPTransport {
 	return &TCPTransport{
 		TCPTransportOpts: opts,
-		rpcchan:    make(chan RPC),
+		rpcchan:          make(chan RPC),
 	}
 }
 
@@ -79,38 +79,39 @@ func (t *TCPTransport) startAcceptLoop() {
 	for {
 		conn, err := t.listener.Accept()
 
-		if errors.Is(err, net.ErrClosed){ return } // to stop accepting when the listener is closed otherwise Close for listener is happening outside causing panic
+		if errors.Is(err, net.ErrClosed) {
+			return
+		} // to stop accepting when the listener is closed otherwise Close for listener is happening outside causing panic
 
 		if err != nil {
 			fmt.Println("Accept error:", err)
 		}
 		// Handle new connection
-		go t.handleNewConnection(conn)
+		go t.handleNewConnection(conn, false) // false means inbound connection
 	}
 }
 
-func (t *TCPTransport) handleNewConnection(conn net.Conn) {
-	peer := NewTCPPeer(conn, true) // outbound = true
+func (t *TCPTransport) handleNewConnection(conn net.Conn, outbound bool) {
+	peer := NewTCPPeer(conn, outbound)
 	fmt.Printf("New incoming connection from:%+v\n", peer)
 
-	defer func(){ // ensure connection is closed on exit
+	defer func() { // ensure connection is closed on exit
 		conn.Close()
 	}()
 
-	// 1. Handshake 
+	// 1. Handshake
 	if err := t.Shakehand(peer); err != nil {
 		fmt.Printf("Error happens during handshake %s\n", err)
-		return 
+		return
 	}
 
 	// 2. Notify OnPeer
 	if t.OnPeer != nil { // if OnPeer function is defined
 		if err := t.OnPeer(peer); err != nil {
 			fmt.Printf("OnPeer error: %s\n", err)
-			return 
+			return
 		}
 	}
-
 
 	// 3. Read messages in loop from connection
 	rpc := RPC{}
@@ -132,4 +133,16 @@ func (t *TCPTransport) handleNewConnection(conn net.Conn) {
 // stop listening too when the user quit action
 func (t *TCPTransport) Close() error {
 	return t.listener.Close()
+}
+
+// Dial to a remote address and establish connection
+func (t *TCPTransport) Dial(address string) error {
+	conn, err := net.Dial("tcp", address)
+	if err != nil {
+		return err
+	}
+	// Handle new outbound connection
+	go t.handleNewConnection(conn, true) // true means outbound connection
+
+	return nil
 }
