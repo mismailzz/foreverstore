@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"sync"
 
 	"github.com/mismailzz/foreverstore/p2p"
 )
@@ -18,6 +19,9 @@ type FileServer struct {
 	FileServerOpts
 	store  *Store
 	quitch chan struct{}
+
+	peerLock sync.Mutex
+	peers map[string]p2p.Peer
 }
 
 func NewFileServer(opts FileServerOpts) *FileServer {
@@ -29,6 +33,7 @@ func NewFileServer(opts FileServerOpts) *FileServer {
 		FileServerOpts: opts,
 		store:          NewStore(storeOpts),
 		quitch:         make(chan struct{}),
+		peers:          make(map[string]p2p.Peer),
 	}
 }
 
@@ -75,5 +80,16 @@ func (s *FileServer) bootstrapNetwork() error {
 			}
 		}(addr)
 	}
+	return nil
+}
+
+func (s *FileServer) OnPeer(peer p2p.Peer) error {
+	s.peerLock.Lock()
+	defer s.peerLock.Unlock()
+	
+	// Add peer to the map
+	s.peers[peer.RemoteAddress().String()] = peer
+
+	log.Printf("Peer connected: %s\n", peer.RemoteAddress().String())
 	return nil
 }

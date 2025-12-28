@@ -30,6 +30,11 @@ func (p *TCPPeer) Close() error {
 	return p.conn.Close()
 }
 
+// RemoteAddress implements the Peer interface, 
+// returning the local address the transport is listening on of current listener.
+func (p *TCPPeer) RemoteAddress() net.Addr{
+	return p.conn.RemoteAddr()
+}
 // Defined to reduce the size of TCPTransport struct
 type TCPTransportOpts struct {
 	// public fields so callers from other packages can set options
@@ -146,3 +151,4 @@ func (t *TCPTransport) Dial(address string) error {
 
 	return nil
 }
+

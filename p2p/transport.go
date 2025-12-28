@@ -1,7 +1,12 @@
 package p2p
 
+import (
+	"net"
+)
+
 // Peer is an interface that represents the remote node in the p2p network.
 type Peer interface {
+	RemoteAddress() net.Addr
 	Close() error
 }
 
