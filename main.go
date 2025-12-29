@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bytes"
 	"log"
 	"time"
 
@@ -20,14 +19,14 @@ func main() {
 	time.Sleep(1 * time.Second) // provide some time for server 1 to start
 
 	go s2.Start()
-	time.Sleep(1 * time.Second) // provide some time for server 2 to start and connect to server 1
+	// time.Sleep(1 * time.Second) // provide some time for server 2 to start and connect to server 1
 
-	data := bytes.NewReader([]byte("my big data file"))
-	if err := s2.StoreData("file1.txt", data); err != nil {
-		log.Fatal(err)
-	}
+	// data := bytes.NewReader([]byte("my big data file"))
+	// if err := s2.StoreData("file1.txt", data); err != nil {
+	// 	log.Fatal(err)
+	// }
 
-	select {} // block forever
+	select {} // block foreve
 
 }
 

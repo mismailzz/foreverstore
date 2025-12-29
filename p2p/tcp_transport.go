@@ -79,7 +79,7 @@ func (t *TCPTransport) ListenAndAccept() error {
 // Transport Accept loop
 func (t *TCPTransport) startAcceptLoop() {
 	for {
-		conn, err := t.listener.Accept()
+		conn, err := t.listener.Accept() // blocking call until a new connection comes in. Similarly listener first LISTEN also block here to ACCEPT new connection which will proceed to handleNewConnection
 
 		if errors.Is(err, net.ErrClosed) {
 			return

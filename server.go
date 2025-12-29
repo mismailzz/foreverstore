@@ -57,8 +57,8 @@ func (s *FileServer) broadcast(p *Payload) error {
 }
 
 func (s *FileServer) StoreData(key string, r io.Reader) error {
-	// 1. Store this file to the disk
-	// 2. Broadcast this file to all known peers in the network
+	// 1. Store this file to the disk - using the store package
+	// 2. Broadcast this file content (or stream it) to all known peers in the network - using the transport package
 
 	buf := new(bytes.Buffer)
 	tee := io.TeeReader(r, buf)
