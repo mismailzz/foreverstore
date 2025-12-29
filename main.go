@@ -1,10 +1,6 @@
 package main
 
 import (
-	"bytes"
-	"log"
-	"time"
-
 	"github.com/mismailzz/foreverstore/p2p"
 )
 
@@ -14,17 +10,24 @@ func main() {
 	s2 := makeServer(":4000", ":3000")
 
 	go func() {
-		log.Fatal(s1.Start())
+		s1.Start()
 	}()
-	time.Sleep(2 * time.Second)
 
-	go s2.Start()
-	time.Sleep(2 * time.Second)
+	s2.Start()
 
-	data := bytes.NewReader([]byte("my big data file"))
-	if err := s2.StoreData("file1.txt", data); err != nil {
-		log.Fatal(err)
-	}
+	// go func() {
+	// 	log.Fatal(s1.Start())
+	// }()
+
+	// time.Sleep(2 * time.Second) // provide some time for server 1 to start
+
+	// go s2.Start()
+	// time.Sleep(2 * time.Second) // provide some time for server 2 to start and connect to server 1
+
+	// data := bytes.NewReader([]byte("my big data file"))
+	// if err := s2.StoreData("file1.txt", data); err != nil {
+	// 	log.Fatal(err)
+	// }
 
 }
 

@@ -51,9 +51,9 @@ func (s *FileServer) broadcast(p *Payload) error {
 		peers = append(peers, peer)
 	}
 
-	mw := io.MultiWriter(peers...)
+	mw := io.MultiWriter(peers...) // writes to all peers
 
-	return gob.NewEncoder(mw).Encode(p)
+	return gob.NewEncoder(mw).Encode(p) // encode the payload and write to all peers
 }
 
 func (s *FileServer) StoreData(key string, r io.Reader) error {
@@ -62,6 +62,9 @@ func (s *FileServer) StoreData(key string, r io.Reader) error {
 
 	buf := new(bytes.Buffer)
 	tee := io.TeeReader(r, buf)
+	// if we read to writestream directly, then buf will be empty
+	// due to which we are using TeeReader to write to both store and buf simultaneously
+	// we can verify this by printing buf.Bytes() before and after writeStream call without TeeReader
 
 	if err := s.store.writeStream(key, tee); err != nil {
 		return err
@@ -77,13 +80,15 @@ func (s *FileServer) StoreData(key string, r io.Reader) error {
 }
 
 func (s *FileServer) Start() error {
+
 	if err := s.Transport.ListenAndAccept(); err != nil {
 		return err
 	}
 
 	s.bootstrapNetwork()
 
-	// as we used to select{} as blocker in the main function, now we are doing it here with proper cleaning of listener
+	// as we used to select{} as blocker in the main function, 
+	// now we are doing it here with proper cleaning of listener
 	s.loop()
 
 	return nil
@@ -99,12 +104,12 @@ func (s *FileServer) loop() {
 	for {
 		select {
 		case msg := <-s.Transport.Consume():
-			//fmt.Println(msg)
-			var p Payload
-			if err := gob.NewDecoder(bytes.NewReader(msg.Payload)).Decode(&p); err != nil {
-				log.Fatal(err)
-			}
-			fmt.Printf("%+v\n", string(p.Data))
+			log.Println("Received message from peer:", msg)
+			// var p Payload
+			// if err := gob.NewDecoder(bytes.NewReader(msg.Payload)).Decode(&p); err != nil {
+			// 	log.Fatal(err)
+			// }
+			// fmt.Printf("%+v\n", string(p.Data))
 		case <-s.quitch:
 			return
 		}
@@ -133,6 +138,8 @@ func (s *FileServer) OnPeer(peer p2p.Peer) error {
 
 	// Add peer to the map
 	s.peers[peer.RemoteAddr().String()] = peer
+
+	log.Printf("All Peers List: %+v\n", s.peers)
 
 	log.Printf("Peer connected: %s\n", peer.RemoteAddr().String())
 	return nil

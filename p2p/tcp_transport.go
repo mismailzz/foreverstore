@@ -70,6 +70,7 @@ func (t *TCPTransport) ListenAndAccept() error {
 
 	// Accept loop
 	go t.startAcceptLoop()
+
 	fmt.Printf("Starting a connection on port:%s\n", t.ListenAddress)
 
 	return nil
@@ -94,7 +95,7 @@ func (t *TCPTransport) startAcceptLoop() {
 
 func (t *TCPTransport) handleNewConnection(conn net.Conn, outbound bool) {
 	peer := NewTCPPeer(conn, outbound)
-	fmt.Printf("New incoming connection from:%+v\n", peer)
+	// fmt.Printf("New incoming connection from:%+v\n", peer)
 
 	defer func() { // ensure connection is closed on exit
 		conn.Close()
