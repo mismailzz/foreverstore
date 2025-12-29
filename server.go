@@ -87,7 +87,7 @@ func (s *FileServer) Start() error {
 
 	s.bootstrapNetwork()
 
-	// as we used to select{} as blocker in the main function, 
+	// as we used to select{} as blocker in the main function,
 	// now we are doing it here with proper cleaning of listener
 	s.loop()
 
@@ -104,12 +104,12 @@ func (s *FileServer) loop() {
 	for {
 		select {
 		case msg := <-s.Transport.Consume():
-			log.Println("Received message from peer:", msg)
-			// var p Payload
-			// if err := gob.NewDecoder(bytes.NewReader(msg.Payload)).Decode(&p); err != nil {
-			// 	log.Fatal(err)
-			// }
-			// fmt.Printf("%+v\n", string(p.Data))
+			//log.Println("Received message from peer:", msg)
+			var p Payload
+			if err := gob.NewDecoder(bytes.NewReader(msg.Payload)).Decode(&p); err != nil {
+				log.Fatal(err)
+			}
+			fmt.Printf("%+v\n", string(p.Data))
 		case <-s.quitch:
 			return
 		}
