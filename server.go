@@ -74,7 +74,7 @@ func (s *FileServer) StoreData(key string, r io.Reader) error {
 		Data: buf.Bytes(),
 	}
 
-	fmt.Println(buf.Bytes())
+	// fmt.Println(buf.Bytes())
 
 	return s.broadcast(payload)
 }
