@@ -1,7 +1,10 @@
 package main
 
 import (
+	"bytes"
 	"log"
+	"time"
+
 	"github.com/mismailzz/foreverstore/p2p"
 )
 
@@ -10,11 +13,18 @@ func main() {
 	s1 := makeServer(":3000", "")
 	s2 := makeServer(":4000", ":3000")
 
-	go func(){
+	go func() {
 		log.Fatal(s1.Start())
 	}()
+	time.Sleep(2 * time.Second)
 
-	s2.Start()
+	go s2.Start()
+	time.Sleep(2 * time.Second)
+
+	data := bytes.NewReader([]byte("my big data file"))
+	if err := s2.StoreData("file1.txt", data); err != nil {
+		log.Fatal(err)
+	}
 
 }
 
@@ -34,7 +44,7 @@ func makeServer(listenAddr string, peerNodes ...string) *FileServer {
 		StorageRootDir:    listenAddr + "_network",
 		PathTransformFunc: CASPathTransformFunc,
 		Transport:         tcpTransport,
-		BootstrapNodes:    peerNodes, 
+		BootstrapNodes:    peerNodes,
 	}
 	server := NewFileServer(fileServerOpts)
 

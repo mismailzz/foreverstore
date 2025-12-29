@@ -1,7 +1,10 @@
 package main
 
 import (
+	"bytes"
+	"encoding/gob"
 	"fmt"
+	"io"
 	"log"
 	"sync"
 
@@ -21,7 +24,7 @@ type FileServer struct {
 	quitch chan struct{}
 
 	peerLock sync.Mutex
-	peers map[string]p2p.Peer
+	peers    map[string]p2p.Peer
 }
 
 func NewFileServer(opts FileServerOpts) *FileServer {
@@ -35,6 +38,42 @@ func NewFileServer(opts FileServerOpts) *FileServer {
 		quitch:         make(chan struct{}),
 		peers:          make(map[string]p2p.Peer),
 	}
+}
+
+type Payload struct {
+	Key  string
+	Data []byte
+}
+
+func (s *FileServer) broadcast(p *Payload) error {
+	peers := []io.Writer{}
+	for _, peer := range s.peers {
+		peers = append(peers, peer)
+	}
+
+	mw := io.MultiWriter(peers...)
+
+	return gob.NewEncoder(mw).Encode(p)
+}
+
+func (s *FileServer) StoreData(key string, r io.Reader) error {
+	// 1. Store this file to the disk
+	// 2. Broadcast this file to all known peers in the network
+
+	buf := new(bytes.Buffer)
+	tee := io.TeeReader(r, buf)
+
+	if err := s.store.writeStream(key, tee); err != nil {
+		return err
+	}
+	payload := &Payload{
+		Key:  key,
+		Data: buf.Bytes(),
+	}
+
+	fmt.Println(buf.Bytes())
+
+	return s.broadcast(payload)
 }
 
 func (s *FileServer) Start() error {
@@ -60,7 +99,12 @@ func (s *FileServer) loop() {
 	for {
 		select {
 		case msg := <-s.Transport.Consume():
-			fmt.Println(msg)
+			//fmt.Println(msg)
+			var p Payload
+			if err := gob.NewDecoder(bytes.NewReader(msg.Payload)).Decode(&p); err != nil {
+				log.Fatal(err)
+			}
+			fmt.Printf("%+v\n", string(p.Data))
 		case <-s.quitch:
 			return
 		}
@@ -86,10 +130,10 @@ func (s *FileServer) bootstrapNetwork() error {
 func (s *FileServer) OnPeer(peer p2p.Peer) error {
 	s.peerLock.Lock()
 	defer s.peerLock.Unlock()
-	
-	// Add peer to the map
-	s.peers[peer.RemoteAddress().String()] = peer
 
-	log.Printf("Peer connected: %s\n", peer.RemoteAddress().String())
+	// Add peer to the map
+	s.peers[peer.RemoteAddr().String()] = peer
+
+	log.Printf("Peer connected: %s\n", peer.RemoteAddr().String())
 	return nil
 }

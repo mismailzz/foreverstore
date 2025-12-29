@@ -6,8 +6,8 @@ import (
 
 // Peer is an interface that represents the remote node in the p2p network.
 type Peer interface {
-	RemoteAddress() net.Addr
-	Close() error
+	net.Conn // Embeds net.Conn interface for network connection methods (it has all the required methods)
+	Send(data []byte) error
 }
 
 // Transport is anything that handles the communication betweend nodes/peers
