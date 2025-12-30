@@ -27,7 +27,7 @@ func NewTCPPeer(conn net.Conn, outbound bool) *TCPPeer {
 
 // Send method implements the Peer interface to send data to the remote peer.
 func (p *TCPPeer) Send(data []byte) error {
-	_, err := p.Write(data)
+	_, err := p.Write(data) // net.Conn has Write method
 	return err
 }
 

@@ -56,27 +56,47 @@ func (s *FileServer) broadcast(p *Payload) error {
 	return gob.NewEncoder(mw).Encode(p) // encode the payload and write to all peers
 }
 
+type Message struct {
+	Payload any
+}
+
 func (s *FileServer) StoreData(key string, r io.Reader) error {
 	// 1. Store this file to the disk - using the store package
 	// 2. Broadcast this file content (or stream it) to all known peers in the network - using the transport package
 
 	buf := new(bytes.Buffer)
-	tee := io.TeeReader(r, buf)
-	// if we read to writestream directly, then buf will be empty
-	// due to which we are using TeeReader to write to both store and buf simultaneously
-	// we can verify this by printing buf.Bytes() before and after writeStream call without TeeReader
-
-	if err := s.store.writeStream(key, tee); err != nil {
+	msg := &Message{
+		Payload: []byte("storagekeyfile"),
+	}
+	if err := gob.NewEncoder(buf).Encode(msg); err != nil {
 		return err
 	}
-	payload := &Payload{
-		Key:  key,
-		Data: buf.Bytes(),
+
+	for _, peer := range s.peers {
+		if err := peer.Send(buf.Bytes()); err != nil {
+			return err
+		}
 	}
 
-	// fmt.Println(buf.Bytes())
+	return nil
 
-	return s.broadcast(payload)
+	// buf := new(bytes.Buffer)
+	// tee := io.TeeReader(r, buf)
+	// // if we read to writestream directly, then buf will be empty
+	// // due to which we are using TeeReader to write to both store and buf simultaneously
+	// // we can verify this by printing buf.Bytes() before and after writeStream call without TeeReader
+
+	// if err := s.store.writeStream(key, tee); err != nil {
+	// 	return err
+	// }
+	// payload := &Payload{
+	// 	Key:  key,
+	// 	Data: buf.Bytes(),
+	// }
+
+	// // fmt.Println(buf.Bytes())
+
+	// return s.broadcast(payload)
 }
 
 func (s *FileServer) Start() error {
@@ -103,13 +123,19 @@ func (s *FileServer) loop() {
 
 	for {
 		select {
-		case msg := <-s.Transport.Consume():
-			//log.Println("Received message from peer:", msg)
-			var p Payload
-			if err := gob.NewDecoder(bytes.NewReader(msg.Payload)).Decode(&p); err != nil {
+		case rpc := <-s.Transport.Consume():
+
+			var m Message
+			if err := gob.NewDecoder(bytes.NewReader(rpc.Payload)).Decode(&m); err != nil {
 				log.Fatal(err)
 			}
-			fmt.Printf("%+v\n", string(p.Data))
+			log.Printf("recv: %s", string(m.Payload.([]byte)))
+
+			// var p Payload
+			// if err := gob.NewDecoder(bytes.NewReader(msg.Payload)).Decode(&p); err != nil {
+			// 	log.Fatal(err)
+			// }
+			// fmt.Printf("%+v\n", string(p.Data))
 		case <-s.quitch:
 			return
 		}
