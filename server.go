@@ -183,7 +183,7 @@ func (s *FileServer) handleMessageStoreFile(from string, msg MessageStoreFile) e
 		return fmt.Errorf("peer (%s) couldnt be found in the peer list", from)
 	}
 
-	if err := s.store.writeStream(msg.Key, peer); err != nil {
+	if err := s.store.writeStream(msg.Key, io.LimitReader(peer, 10)); err != nil {
 		return err
 	}
 
