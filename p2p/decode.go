@@ -2,7 +2,6 @@ package p2p
 
 import (
 	"encoding/gob"
-	"fmt"
 	"io"
 )
 
@@ -13,10 +12,10 @@ type Decoder interface {
 
 type GOBDecoder struct{}
 
-// Instead of a fixed buffer, decode ONLY the GOB message 
+// Instead of a fixed buffer, decode ONLY the GOB message
 // so the underlying reader's cursor stays right at the start of the file data.
 func (d *GOBDecoder) Decode(r io.Reader, rpc *RPC) error {
-    return gob.NewDecoder(r).Decode(rpc)
+	return gob.NewDecoder(r).Decode(rpc)
 }
 
 // DefaultDecoder is a basic implementation of Decoder interface.
@@ -34,6 +33,6 @@ func (d *DefaultDecoder) Decode(r io.Reader, rpc *RPC) error {
 	}
 
 	rpc.Payload = buffer[:n]
-	fmt.Printf("Payload %s\n", rpc.Payload)
+
 	return nil
 }
