@@ -7,6 +7,7 @@ import (
 	"io"
 	"log"
 	"sync"
+	"time"
 
 	"github.com/mismailzz/foreverstore/p2p"
 )
@@ -86,17 +87,17 @@ func (s *FileServer) StoreData(key string, r io.Reader) error {
 		}
 	}
 
-	// time.Sleep(2 * time.Second) // instructor didnt added this one but our issue is fixed
-	// // because otherwise both of the strings are being send to TCP channel at once
-	// // and the Read inside the loop() for the file is failing
-	// // if we remove this - then race condition will happen between calls - which cause deadlock
+	time.Sleep(3 * time.Second)
+	// because otherwise both of the strings are being send to TCP channel at once
+	// and the Read inside the loop() for the file is failing
+	// if we remove this - then race condition will happen between calls - which cause deadlock
 
-	// payload := []byte("THIS IS A BIG FILE")
-	// for _, peer := range s.peers {
-	// 	if err := peer.Send(payload); err != nil {
-	// 		return err
-	// 	}
-	// }
+	payload := []byte("THIS IS A BIG FILE")
+	for _, peer := range s.peers {
+		if err := peer.Send(payload); err != nil {
+			return err
+		}
+	}
 
 	return nil
 
@@ -158,33 +159,6 @@ func (s *FileServer) loop() {
 				return
 			}
 
-			// // find the peer who sent this message
-			// peer, ok := s.peers[rpc.From.String()]
-			// if !ok {
-			// 	log.Fatalf("peer not found for address: %s\n", rpc.From.String())
-			// }
-			// log.Printf("message received from peer: %s\n", peer.RemoteAddr().String())
-
-			// // Read the message from underlying peer connection
-			// // As its also being read inside the handleNewConnection loop of that peer connection
-			// // by running this - we found that message from channel didnt show up
-			// // and this Read call blocked forever
-			// // Goal: we want to have next read here, but dont allow handleNewConnection to read again until we are done processing this message
-			// b := make([]byte, 1000) // hardcoded buffer size for testing
-			// if _, err := peer.Read(b); err != nil {
-			// 	log.Fatal(err)
-			// }
-			// log.Printf("raw data recv: %s\n", string(b))
-
-			// peer.Wg.Done() // signal that we are done processing this message
-			// need to change this below hardcoded line to dynamic peer
-			// peer.(*p2p.TCPPeer).Wg.Done() // signal that we are done processing this message
-
-			// var p Payload
-			// if err := gob.NewDecoder(bytes.NewReader(msg.Payload)).Decode(&p); err != nil {
-			// 	log.Fatal(err)
-			// }
-			// fmt.Printf("%+v\n", string(p.Data))
 		case <-s.quitch:
 			return
 		}
@@ -203,7 +177,18 @@ func (s *FileServer) handleMessage(from string, msg *Message) error {
 }
 
 func (s *FileServer) handleMessageStoreFile(from string, msg MessageStoreFile) error {
-	fmt.Printf("recv store file msg: %+v\n", msg)
+
+	peer, ok := s.peers[from]
+	if !ok {
+		return fmt.Errorf("peer (%s) couldnt be found in the peer list", from)
+	}
+
+	if err := s.store.writeStream(msg.Key, peer); err != nil {
+		return err
+	}
+
+	peer.(*p2p.TCPPeer).Wg.Done()
+
 	return nil
 }
 
