@@ -62,7 +62,8 @@ type Message struct {
 }
 
 type MessageStoreFile struct {
-	Key string
+	Key  string
+	Size int64
 }
 
 func (s *FileServer) StoreData(key string, r io.Reader) error {
@@ -72,7 +73,8 @@ func (s *FileServer) StoreData(key string, r io.Reader) error {
 	buf := new(bytes.Buffer)
 	msg := &Message{
 		Payload: MessageStoreFile{
-			Key: key,
+			Key:  key,
+			Size: 16,
 		},
 	}
 
@@ -94,9 +96,11 @@ func (s *FileServer) StoreData(key string, r io.Reader) error {
 
 	payload := []byte("THIS IS A BIG FILE")
 	for _, peer := range s.peers {
-		if err := peer.Send(payload); err != nil {
+		n, err := io.Copy(peer, bytes.NewReader(payload))
+		if err != nil {
 			return err
 		}
+		fmt.Printf("recieved and written bytes to disk: %+v\n", n)
 	}
 
 	return nil
@@ -152,7 +156,7 @@ func (s *FileServer) loop() {
 				return
 			}
 
-			log.Printf("recv: %+v\n", m.Payload)
+			// log.Printf("recv: %+v\n", m.Payload)
 
 			if err := s.handleMessage(rpc.From.String(), &m); err != nil {
 				log.Println(err)
@@ -183,7 +187,7 @@ func (s *FileServer) handleMessageStoreFile(from string, msg MessageStoreFile) e
 		return fmt.Errorf("peer (%s) couldnt be found in the peer list", from)
 	}
 
-	if err := s.store.writeStream(msg.Key, io.LimitReader(peer, 10)); err != nil {
+	if err := s.store.writeStream(msg.Key, io.LimitReader(peer, msg.Size)); err != nil {
 		return err
 	}
 

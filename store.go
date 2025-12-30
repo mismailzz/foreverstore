@@ -95,7 +95,7 @@ func (s *Store) writeStream(key string, r io.Reader) error {
 		return err
 	}
 
-	panic("ddd") // learning point here - even we defined panic here but its seem that when
+	//panic("ddd") // learning point here - even we defined panic here but its seem that when
 	// tcp connection is reading it couldnt find to get the EOF from the READ IO but in the test
 	// case things working fine bcause we used the bytes and intialize newReader for those bytes
 	// that automatically add the EOF but in this case when the program runs and TCP connection to
