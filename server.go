@@ -78,6 +78,13 @@ func (s *FileServer) StoreData(key string, r io.Reader) error {
 		}
 	}
 
+	payload := []byte("THIS IS A BIG FILE")
+	for _, peer := range s.peers {
+		if err := peer.Send(payload); err != nil {
+			return err
+		}
+	}
+
 	return nil
 
 	// buf := new(bytes.Buffer)
@@ -129,7 +136,25 @@ func (s *FileServer) loop() {
 			if err := gob.NewDecoder(bytes.NewReader(rpc.Payload)).Decode(&m); err != nil {
 				log.Fatal(err)
 			}
-			log.Printf("recv: %s", string(m.Payload.([]byte)))
+
+			// find the peer who sent this message
+			peer, ok := s.peers[rpc.From.String()]
+			if !ok {
+				log.Fatalf("peer not found for address: %s\n", rpc.From.String())
+			}
+			log.Printf("message received from peer: %s\n", peer.RemoteAddr().String())
+
+			// Read the message from underlying peer connection
+			// As its also being read inside the handleNewConnection loop of that peer connection
+			// by running this - we found that message from channel didnt show up
+			// and this Read call blocked forever
+			b := make([]byte, 4096) // assuming max message size is 4096 bytes
+			if _, err := peer.Read(b); err != nil {
+				log.Fatal(err)
+			}
+			log.Printf("raw data recv: %s\n", string(b))
+
+			log.Printf("recv: %s\n", string(m.Payload.([]byte)))
 
 			// var p Payload
 			// if err := gob.NewDecoder(bytes.NewReader(msg.Payload)).Decode(&p); err != nil {
