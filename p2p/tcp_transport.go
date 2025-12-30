@@ -128,7 +128,7 @@ func (t *TCPTransport) handleNewConnection(conn net.Conn, outbound bool) {
 			return
 		}
 
-		fmt.Printf("Payload %s\n", rpc.Payload)
+		// fmt.Printf("Payload %s\n", rpc.Payload)
 		rpc.From = conn.RemoteAddr()
 		peer.Wg.Add(1)
 		fmt.Println("waiting till stream is done")

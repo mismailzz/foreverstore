@@ -7,7 +7,6 @@ import (
 	"io"
 	"log"
 	"sync"
-	"time"
 
 	"github.com/mismailzz/foreverstore/p2p"
 )
@@ -61,13 +60,19 @@ type Message struct {
 	Payload any
 }
 
+type MessageStoreFile struct {
+	Key string
+}
+
 func (s *FileServer) StoreData(key string, r io.Reader) error {
 	// 1. Store this file to the disk - using the store package
 	// 2. Broadcast this file content (or stream it) to all known peers in the network - using the transport package
 
 	buf := new(bytes.Buffer)
 	msg := &Message{
-		Payload: []byte("storagekeyfile"),
+		Payload: MessageStoreFile{
+			Key: key,
+		},
 	}
 	if err := gob.NewEncoder(buf).Encode(msg); err != nil {
 		return err
@@ -79,17 +84,17 @@ func (s *FileServer) StoreData(key string, r io.Reader) error {
 		}
 	}
 
-	time.Sleep(2 * time.Second) // instructor didnt added this one but our issue is fixed
-	// because otherwise both of the strings are being send to TCP channel at once
-	// and the Read inside the loop() for the file is failing
-	// if we remove this - then race condition will happen between calls - which cause deadlock
+	// time.Sleep(2 * time.Second) // instructor didnt added this one but our issue is fixed
+	// // because otherwise both of the strings are being send to TCP channel at once
+	// // and the Read inside the loop() for the file is failing
+	// // if we remove this - then race condition will happen between calls - which cause deadlock
 
-	payload := []byte("THIS IS A BIG FILE")
-	for _, peer := range s.peers {
-		if err := peer.Send(payload); err != nil {
-			return err
-		}
-	}
+	// payload := []byte("THIS IS A BIG FILE")
+	// for _, peer := range s.peers {
+	// 	if err := peer.Send(payload); err != nil {
+	// 		return err
+	// 	}
+	// }
 
 	return nil
 
@@ -143,7 +148,7 @@ func (s *FileServer) loop() {
 				log.Fatal(err)
 			}
 
-			log.Printf("recv: %s\n", string(m.Payload.([]byte)))
+			log.Printf("recv: %+v\n", m.Payload)
 
 			// find the peer who sent this message
 			peer, ok := s.peers[rpc.From.String()]
@@ -205,4 +210,9 @@ func (s *FileServer) OnPeer(peer p2p.Peer) error {
 
 	log.Printf("Peer connected: %s\n", peer.RemoteAddr().String())
 	return nil
+}
+
+func init() {
+	// if you are putting any time inside ANY then we have to register in gob
+	gob.Register(MessageStoreFile{})
 }
