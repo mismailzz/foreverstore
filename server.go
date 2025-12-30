@@ -82,6 +82,7 @@ func (s *FileServer) StoreData(key string, r io.Reader) error {
 	time.Sleep(2 * time.Second) // instructor didnt added this one but our issue is fixed
 	// because otherwise both of the strings are being send to TCP channel at once
 	// and the Read inside the loop() for the file is failing
+	// if we remove this - then race condition will happen between calls - which cause deadlock
 
 	payload := []byte("THIS IS A BIG FILE")
 	for _, peer := range s.peers {
