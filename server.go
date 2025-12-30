@@ -7,6 +7,7 @@ import (
 	"io"
 	"log"
 	"sync"
+	"time"
 
 	"github.com/mismailzz/foreverstore/p2p"
 )
@@ -78,6 +79,10 @@ func (s *FileServer) StoreData(key string, r io.Reader) error {
 		}
 	}
 
+	time.Sleep(2 * time.Second) // instructor didnt added this one but our issue is fixed
+	// because otherwise both of the strings are being send to TCP channel at once
+	// and the Read inside the loop() for the file is failing
+
 	payload := []byte("THIS IS A BIG FILE")
 	for _, peer := range s.peers {
 		if err := peer.Send(payload); err != nil {
@@ -137,6 +142,8 @@ func (s *FileServer) loop() {
 				log.Fatal(err)
 			}
 
+			log.Printf("recv: %s\n", string(m.Payload.([]byte)))
+
 			// find the peer who sent this message
 			peer, ok := s.peers[rpc.From.String()]
 			if !ok {
@@ -148,13 +155,16 @@ func (s *FileServer) loop() {
 			// As its also being read inside the handleNewConnection loop of that peer connection
 			// by running this - we found that message from channel didnt show up
 			// and this Read call blocked forever
-			b := make([]byte, 4096) // assuming max message size is 4096 bytes
+			// Goal: we want to have next read here, but dont allow handleNewConnection to read again until we are done processing this message
+			b := make([]byte, 1000) // hardcoded buffer size for testing
 			if _, err := peer.Read(b); err != nil {
 				log.Fatal(err)
 			}
 			log.Printf("raw data recv: %s\n", string(b))
 
-			log.Printf("recv: %s\n", string(m.Payload.([]byte)))
+			// peer.Wg.Done() // signal that we are done processing this message
+			// need to change this below hardcoded line to dynamic peer
+			peer.(*p2p.TCPPeer).Wg.Done() // signal that we are done processing this message
 
 			// var p Payload
 			// if err := gob.NewDecoder(bytes.NewReader(msg.Payload)).Decode(&p); err != nil {
