@@ -93,10 +93,8 @@ func (s *FileServer) StoreData(key string, r io.Reader) error {
 	// because otherwise both of the strings are being send to TCP channel at once
 	// and the Read inside the loop() for the file is failing
 	// if we remove this - then race condition will happen between calls - which cause deadlock
-
-	payload := []byte("THIS IS A BIG FILE")
 	for _, peer := range s.peers {
-		n, err := io.Copy(peer, bytes.NewReader(payload))
+		n, err := io.Copy(peer, r)
 		if err != nil {
 			return err
 		}
