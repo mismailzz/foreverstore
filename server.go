@@ -67,34 +67,47 @@ type MessageStoreFile struct {
 }
 
 func (s *FileServer) StoreData(key string, r io.Reader) error {
-	// 1. Store this file to the disk - using the store package
-	// 2. Broadcast this file content (or stream it) to all known peers in the network - using the transport package
 
-	buf := new(bytes.Buffer)
+	// Task - 1
+	// Save file on the Host/PeerNode side 
+	fileBuffer := new(bytes.Buffer)
+	tee := io.TeeReader(r, fileBuffer)
+	size, err := s.store.writeStream(key, tee)
+	if err != nil {
+		return err
+	}
+	// if we read to writestream directly, then buf will be empty
+	// due to which we are using TeeReader to write to both store and buf simultaneously
+	// we can verify this by printing buf.Bytes() before and after writeStream call without TeeReader
+
+	// Task - 2
+	// Define the Payload to broadcast 
 	msg := &Message{
 		Payload: MessageStoreFile{
 			Key:  key,
-			Size: 16,
+			Size: size, 
 		},
 	}
 
-	// Encoding
-	if err := gob.NewEncoder(buf).Encode(msg); err != nil {
+	// Encode the Payload before broadcast
+	msgBuff := new(bytes.Buffer)
+	if err := gob.NewEncoder(msgBuff).Encode(msg); err != nil {
 		return err
 	}
 
 	for _, peer := range s.peers {
-		if err := peer.Send(buf.Bytes()); err != nil {
+		if err := peer.Send(msgBuff.Bytes()); err != nil {
 			return err
 		}
 	}
-
+	
+	// Task - 3
 	time.Sleep(3 * time.Second)
 	// because otherwise both of the strings are being send to TCP channel at once
 	// and the Read inside the loop() for the file is failing
 	// if we remove this - then race condition will happen between calls - which cause deadlock
 	for _, peer := range s.peers {
-		n, err := io.Copy(peer, r)
+		n, err := io.Copy(peer, fileBuffer)
 		if err != nil {
 			return err
 		}
@@ -103,23 +116,6 @@ func (s *FileServer) StoreData(key string, r io.Reader) error {
 
 	return nil
 
-	// buf := new(bytes.Buffer)
-	// tee := io.TeeReader(r, buf)
-	// // if we read to writestream directly, then buf will be empty
-	// // due to which we are using TeeReader to write to both store and buf simultaneously
-	// // we can verify this by printing buf.Bytes() before and after writeStream call without TeeReader
-
-	// if err := s.store.writeStream(key, tee); err != nil {
-	// 	return err
-	// }
-	// payload := &Payload{
-	// 	Key:  key,
-	// 	Data: buf.Bytes(),
-	// }
-
-	// // fmt.Println(buf.Bytes())
-
-	// return s.broadcast(payload)
 }
 
 func (s *FileServer) Start() error {
@@ -148,13 +144,14 @@ func (s *FileServer) loop() {
 		select {
 		case rpc := <-s.Transport.Consume():
 
+			// Step-1 : 
+			// read from the channel what has been written and Decode it 
 			var m Message
 			if err := gob.NewDecoder(bytes.NewReader(rpc.Payload)).Decode(&m); err != nil {
 				log.Println(err)
 				return
 			}
 
-			// log.Printf("recv: %+v\n", m.Payload)
 
 			if err := s.handleMessage(rpc.From.String(), &m); err != nil {
 				log.Println(err)
@@ -185,7 +182,7 @@ func (s *FileServer) handleMessageStoreFile(from string, msg MessageStoreFile) e
 		return fmt.Errorf("peer (%s) couldnt be found in the peer list", from)
 	}
 
-	if err := s.store.writeStream(msg.Key, io.LimitReader(peer, msg.Size)); err != nil {
+	if _, err := s.store.writeStream(msg.Key, io.LimitReader(peer, msg.Size)); err != nil {
 		return err
 	}
 

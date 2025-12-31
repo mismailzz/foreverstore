@@ -71,7 +71,7 @@ func NewStore(opts StoreOpts) *Store {
 	}
 }
 
-func (s *Store) writeStream(key string, r io.Reader) error {
+func (s *Store) writeStream(key string, r io.Reader) (int64, error) {
 
 	pathKey := s.PathTransformFunc(key)
 
@@ -79,7 +79,7 @@ func (s *Store) writeStream(key string, r io.Reader) error {
 
 	// Check permissions in the provided pathname
 	if err := os.MkdirAll(pathnameWithRoot, os.ModePerm); err != nil {
-		return err
+		return 0, err
 	}
 
 	filenameFullPathWithRoot := pathKey.FullPath(s.RootDir)
@@ -87,12 +87,12 @@ func (s *Store) writeStream(key string, r io.Reader) error {
 	// Create file
 	f, err := os.Create(filenameFullPathWithRoot)
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	n, err := io.Copy(f, r)
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	//panic("ddd") // learning point here - even we defined panic here but its seem that when
@@ -108,7 +108,7 @@ func (s *Store) writeStream(key string, r io.Reader) error {
 
 	fmt.Printf("Written %d bytes to %s\n", n, filenameFullPathWithRoot)
 
-	return nil
+	return n, nil
 }
 
 func (s *Store) readStream(key string) (io.Reader, error) {
